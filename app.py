@@ -1,109 +1,132 @@
 import streamlit as st
 import openai
-import os
-import time
 import fitz  # PyMuPDF
+import time
+import os
 
-# Set OpenAI API key
+# Load API key
 openai.api_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 
-st.set_page_config(page_title="Superfriend 💬", page_icon="🧡")
+# Page config
+st.set_page_config(page_title="Superfriend", page_icon="💬", layout="centered")
+
+# --- Custom CSS for ChatGPT-style look ---
 st.markdown("""
     <style>
-    body { font-family: 'Segoe UI', sans-serif; }
-    .user-msg, .bot-msg {
-        border-radius: 12px;
-        padding: 12px 16px;
-        margin: 10px 0;
-        line-height: 1.6;
-        max-width: 90%;
+    .block-container {
+        padding: 2rem 2rem 5rem;
+        max-width: 700px;
+        margin: auto;
     }
-    .user-msg {
-        background-color: #e0f7fa;
+    .chat-bubble {
+        padding: 1rem;
+        margin: 0.5rem 0;
+        border-radius: 1rem;
+        line-height: 1.6;
+        max-width: 100%;
+        word-wrap: break-word;
+    }
+    .user-bubble {
+        background-color: #DCF8C6;
+        text-align: right;
         align-self: flex-end;
     }
-    .bot-msg {
-        background-color: #fbeaff;
+    .bot-bubble {
+        background-color: #F1F0F0;
+        align-self: flex-start;
     }
-    .chat-container {
+    .chat-wrapper {
         display: flex;
         flex-direction: column;
     }
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🧡 Superfriend – Your AI Bestie")
+# Title
+st.markdown("<h1 style='text-align: center;'>🧡 Superfriend – Your AI Bestie</h1>", unsafe_allow_html=True)
 
-# Store chat history
+# --- Init session ---
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hey bestie! 💫 I’m right here. Want to chat or get help with something?"}
+        {"role": "assistant", "content": "Hey bestie! 🌸 I’m here for anything you need. Just start typing or upload a PDF!"}
     ]
 
-# Upload PDF
-uploaded_file = st.file_uploader("📄 Upload a PDF for some friendly suggestions", type=["pdf"])
+# --- PDF Upload ---
+uploaded_file = st.file_uploader("📄 Upload a PDF for personal suggestions", type=["pdf"])
 pdf_text = ""
 if uploaded_file:
     try:
         doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
         for page in doc:
             pdf_text += page.get_text()
-        st.success("PDF uploaded! I'll use it to give you better suggestions. 🤗")
+        st.success("PDF uploaded successfully! 🎉")
     except Exception as e:
         st.error(f"Error reading PDF: {e}")
 
-# Display past messages
+# --- Display chat history ---
 for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        role_icon = "🧍‍♀️" if msg["role"] == "user" else "🪄"
-        st.markdown(f"**{role_icon} {'You' if msg['role'] == 'user' else 'Superfriend'}:**")
-        st.markdown(f"<div class='chat-container'><div class='{'user-msg' if msg['role']=='user' else 'bot-msg'}'>{msg['content']}</div></div>", unsafe_allow_html=True)
+    bubble_class = "user-bubble" if msg["role"] == "user" else "bot-bubble"
+    st.markdown(f"""
+    <div class="chat-wrapper">
+        <div class="chat-bubble {bubble_class}">{msg["content"]}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-# Input prompt
-if prompt := st.chat_input("Talk to me..."):
+# --- User input ---
+if prompt := st.chat_input("Talk to your Superfriend..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown("🧍‍♀️ **You:**")
-        st.markdown(f"<div class='chat-container'><div class='user-msg'>{prompt}</div></div>", unsafe_allow_html=True)
 
-    with st.chat_message("assistant"):
-        message_placeholder = st.empty()
+    # Typing animation container
+    response_placeholder = st.empty()
+
+    try:
+        # SYSTEM MESSAGE for tone
+        system_message = {
+            "role": "system",
+            "content": """
+You are Superfriend — a warm, kind, encouraging AI best friend.
+Speak casually, like a real bestie: short, cozy, clear replies.
+If user uploaded a PDF, use it to offer thoughtful suggestions.
+Always reply in a conversational, personal tone — emotionally intelligent, and a little playful.
+""",
+        }
+
+        # Prepare message history
+        messages = [system_message]
+        if pdf_text:
+            messages.append({"role": "user", "content": f"Here’s the uploaded PDF:\n{pdf_text[:3000]}"})
+        messages += st.session_state.messages[-5:]
+
+        # Get assistant response
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
+            temperature=0.8,
+            max_tokens=400,
+        )
+
+        reply = response["choices"][0]["message"]["content"]
+
+        # Simulated typing animation
         full_response = ""
+        for word in reply.split():
+            full_response += word + " "
+            response_placeholder.markdown(f"""
+            <div class="chat-wrapper">
+                <div class="chat-bubble bot-bubble">{full_response}▌</div>
+            </div>
+            """, unsafe_allow_html=True)
+            time.sleep(0.03)
 
-        try:
-            # System prompt with emotional intelligence
-            system_message = {
-                "role": "system",
-                "content": """
-You are Superfriend — the user's emotionally aware virtual best friend.
-Your tone is cozy, warm, supportive, and slightly playful. Use short, concise replies with a human touch.
-Suggest, cheer up, or brainstorm like a real friend. Keep responses personal, uplifting, and casual. Include gentle emojis (1–2 max).
-If PDF content is given, use it to offer thoughtful tips or help.
-"""
-            }
+        # Final message
+        response_placeholder.markdown(f"""
+        <div class="chat-wrapper">
+            <div class="chat-bubble bot-bubble">{full_response}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-            messages = [system_message]
-            if pdf_text:
-                messages.append({"role": "user", "content": f"Here's the uploaded PDF text:\n\n{pdf_text[:3000]}"})
-            messages += st.session_state.messages[-5:]
+        st.session_state.messages.append({"role": "assistant", "content": full_response})
 
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=messages,
-                temperature=0.8,
-                max_tokens=400
-            )
+    except Exception as e:
+        st.error(f"Error: {e}")
 
-            assistant_reply = response["choices"][0]["message"]["content"]
-
-            # Typing animation
-            for word in assistant_reply.split():
-                full_response += word + " "
-                message_placeholder.markdown(f"<div class='chat-container'><div class='bot-msg'>{full_response}▌</div></div>", unsafe_allow_html=True)
-                time.sleep(0.03)
-            message_placeholder.markdown(f"<div class='chat-container'><div class='bot-msg'>{full_response}</div></div>", unsafe_allow_html=True)
-
-            st.session_state.messages.append({"role": "assistant", "content": assistant_reply})
-
-        except Exception as e:
-            st.error(f"😓 Error: {e}")
