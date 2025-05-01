@@ -88,7 +88,7 @@ You're not just here to respond — you're here to make the user feel seen, supp
 
             # Call OpenAI
             response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o",
                 messages=messages,
                 temperature=0.85,
                 max_tokens=500,
