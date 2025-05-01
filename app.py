@@ -4,13 +4,13 @@ import os
 import time
 import fitz  # PyMuPDF
 
-# OpenAI API Key
+# API Key setup
 openai.api_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 
-# Page config
+# Streamlit page settings
 st.set_page_config(page_title="Superfriend 💬", page_icon="🧡")
 
-# Inject custom CSS for better spacing
+# Inject CSS for layout polish
 st.markdown("""
     <style>
         .element-container:has(div[data-testid="stChatMessageContent"]) {
@@ -25,13 +25,13 @@ st.markdown("""
 
 st.title("🧡 Superfriend – Your Virtual Best Friend")
 
-# Initialize chat history
+# Session state for chat messages
 if "messages" not in st.session_state:
     st.session_state.messages = [
         {"role": "assistant", "content": "Hey bestie! 🌟 I'm here for you — talk to me or upload a PDF if you’d like advice or ideas!"}
     ]
 
-# PDF Upload Section
+# PDF upload section
 uploaded_file = st.file_uploader("📄 Upload a PDF for cozy, helpful suggestions", type=["pdf"])
 pdf_text = ""
 
@@ -44,12 +44,12 @@ if uploaded_file:
     except Exception as e:
         st.error(f"Couldn't read the PDF: {e}")
 
-# Display previous messages
+# Display chat history
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"], unsafe_allow_html=True)
 
-# User input box
+# Chat input box
 if prompt := st.chat_input("Talk to me..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
@@ -60,7 +60,7 @@ if prompt := st.chat_input("Talk to me..."):
         full_response = ""
 
         try:
-            # Superfriend-style prompt
+            # Superfriend system prompt
             system_message = {
                 "role": "system",
                 "content": """
@@ -92,6 +92,7 @@ You're not just here to respond — you're here to make the user feel seen, supp
 """
             }
 
+            # Prepare message history
             messages = [system_message]
             if pdf_text:
                 messages.append({
@@ -100,7 +101,7 @@ You're not just here to respond — you're here to make the user feel seen, supp
                 })
             messages += st.session_state.messages[-5:]
 
-            # OpenAI Chat API
+            # OpenAI response
             response = openai.ChatCompletion.create(
                 model="gpt-4o",
                 messages=messages,
@@ -109,8 +110,13 @@ You're not just here to respond — you're here to make the user feel seen, supp
             )
 
             assistant_reply = response["choices"][0]["message"]["content"]
-            assistant_reply = assistant_reply.replace("\n", "\n\n")  # Format with paragraph spacing
 
+            # 🔧 Formatting fix: bullets + spacing
+            assistant_reply = assistant_reply.replace(" - ", "\n- ")  # bullet points
+            assistant_reply = assistant_reply.replace("\n", "\n\n")  # spacing
+            assistant_reply = assistant_reply.replace(". ", ".\n\n")  # paragraph spacing
+
+            # Typing animation
             for word in assistant_reply.split():
                 full_response += word + " "
                 time.sleep(0.02)
