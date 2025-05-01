@@ -1,63 +1,87 @@
 import streamlit as st
 import openai
-import time
 import os
+import time
+import fitz  # PyMuPDF
 
-# Load your OpenAI API key (recommended via secrets or env variable)
+# Set your API key (safest via .streamlit/secrets.toml or env)
 openai.api_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 
 st.set_page_config(page_title="Superfriend 💬", page_icon="🧡")
-
 st.title("🧡 Superfriend – Your Virtual Best Friend")
 
-# Intro message
+# Chat history
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hey bestie! 🌟 How are you feeling today?"}
+        {"role": "assistant", "content": "Hey bestie! 🌟 I'm here for you. Want to chat or upload a PDF for some advice?"}
     ]
+
+# PDF upload
+uploaded_file = st.file_uploader("📄 Upload a PDF for suggestions", type=["pdf"])
+pdf_text = ""
+
+if uploaded_file:
+    try:
+        doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
+        for page in doc:
+            pdf_text += page.get_text()
+        st.success("PDF uploaded! I'll consider it while chatting 💡")
+    except Exception as e:
+        st.error(f"Couldn't read the PDF: {e}")
 
 # Display chat history
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# Chat input box
-if prompt := st.chat_input("Type here..."):
-    # Add user message
+# User prompt input
+if prompt := st.chat_input("Talk to me..."):
+    # Save user message
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Generate assistant response using OpenAI
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         full_response = ""
 
         try:
+            # Prepare prompt
+            system_message = {
+                "role": "system",
+                "content": """
+You are Superfriend — a cheerful, caring, emotionally intelligent virtual best friend.
+You offer friendly conversation, warm support, helpful advice, and fun ideas like a real bestie.
+If the user uploaded a PDF, use it to give relevant, light-hearted, or helpful suggestions.
+Keep replies short, chatty, and comforting. Be fun, never formal.
+"""
+            }
+
+            messages = [system_message]
+            if pdf_text:
+                messages.append({
+                    "role": "user",
+                    "content": f"This is some content from the user's uploaded PDF:\n\n{pdf_text[:3000]}"
+                })
+            messages += st.session_state.messages[-5:]  # limit to last few for performance
+
             response = openai.ChatCompletion.create(
-                model="gpt-4o",  # or gpt-4 if you have access
-                messages=[
-                    {"role": "system", "content": """
-You are Superfriend, a warm, supportive, chatty virtual best friend.
-Always reply like a human bestie would: empathetic, light-hearted, and encouraging.
-Use friendly tone, jokes, comforting words, and life tips. Avoid sounding robotic or too formal.
-"""}
-                ] + st.session_state.messages[-10:],  # Limit context
+                model="gpt-3.5-turbo",
+                messages=messages,
                 temperature=0.8,
-                max_tokens=300
+                max_tokens=500
             )
 
             assistant_reply = response["choices"][0]["message"]["content"]
 
-            # Simulate typing effect
             for word in assistant_reply.split():
                 full_response += word + " "
                 time.sleep(0.03)
                 message_placeholder.markdown(full_response + "▌")
             message_placeholder.markdown(full_response)
 
-            st.session_state.messages.append(
-                {"role": "assistant", "content": assistant_reply}
-            )
+            # Save assistant reply
+            st.session_state.messages.append({"role": "assistant", "content": assistant_reply})
+
         except Exception as e:
-            st.error(f"😓 Something went wrong: {e}")
+            st.error(f"😓 Error: {e}")
