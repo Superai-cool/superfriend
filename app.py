@@ -35,7 +35,7 @@ if prompt := st.chat_input("Type here..."):
 
         try:
             response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",  # or gpt-4 if you have access
+                model="gpt-4o",  # or gpt-4 if you have access
                 messages=[
                     {"role": "system", "content": """
 You are Superfriend, a warm, supportive, chatty virtual best friend.
