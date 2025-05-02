@@ -26,6 +26,12 @@ st.markdown("""
 
 st.title("🧡 Superfriend – Your Virtual Best Friend")
 
+# ✅ Formatting fix function
+def format_response(text):
+    text = re.sub(r"(?<!\n)(\d+\.)", r"\n\n\1", text)  # add spacing before numbers
+    text = re.sub(r"\n{3,}", "\n\n", text)  # collapse too many line breaks
+    return text.strip()
+
 # Initialize chat session
 if "messages" not in st.session_state:
     st.session_state.messages = [
@@ -71,7 +77,7 @@ if prompt := st.chat_input("Talk to me..."):
             )
             detected_language = detection["choices"][0]["message"]["content"].strip()
 
-            # Step 2: Full Superfriend system prompt
+            # Step 2: Superfriend system prompt
             system_message = {
                 "role": "system",
                 "content": f"""
@@ -142,7 +148,7 @@ You are not just an assistant — you are the user’s Superfriend. 🌈
                 })
             messages += st.session_state.messages[-5:]
 
-            # OpenAI call
+            # OpenAI chat response
             response = openai.ChatCompletion.create(
                 model="gpt-4o",
                 messages=messages,
@@ -150,11 +156,7 @@ You are not just an assistant — you are the user’s Superfriend. 🌈
                 max_tokens=500,
             )
 
-            assistant_reply = response["choices"][0]["message"]["content"]
-
-            # ✅ Fix formatting
-            assistant_reply = re.sub(r"\n{3,}", "\n\n", assistant_reply)  # collapse 3+ line breaks
-            assistant_reply = assistant_reply.strip()
+            assistant_reply = format_response(response["choices"][0]["message"]["content"])
 
             # Typing animation
             for word in assistant_reply.split():
