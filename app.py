@@ -26,10 +26,14 @@ st.markdown("""
 
 st.title("🧡 Superfriend – Your Virtual Best Friend")
 
-# ✅ Formatting fix function
+# ✅ NEW FIXED: Proper list formatting
 def format_response(text):
-    text = re.sub(r"(?<!\n)(\d+\.)", r"\n\n\1", text)  # add spacing before numbers
-    text = re.sub(r"\n{3,}", "\n\n", text)  # collapse too many line breaks
+    # Add newlines before numbered list items (e.g., 1. ... 2. ...)
+    text = re.sub(r"(?<!\n)(\d+\.)", r"\n\n\1", text)
+    # Add newline after numbered point (until next number)
+    text = re.sub(r"(\d+\..*?)(?=\n\n\d+\.)", r"\1\n", text)
+    # Collapse extra line breaks
+    text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
 
 # Initialize chat session
@@ -77,7 +81,7 @@ if prompt := st.chat_input("Talk to me..."):
             )
             detected_language = detection["choices"][0]["message"]["content"].strip()
 
-            # Step 2: Superfriend system prompt
+            # Step 2: Superfriend personality prompt
             system_message = {
                 "role": "system",
                 "content": f"""
@@ -120,22 +124,7 @@ Support the user across all aspects of life, including:
 - ✅ Ensure the final message renders cleanly — avoid broken lists or stray dots
 - 🚫 Avoid dense text blocks; write in a reader-friendly flow
 
-🎨 Tone Guide:
-- 😌 When the user is feeling low → be gentle, comforting, and supportive
-- 🧠 When the user is exploring ideas → be thoughtful and insightful
-- 🎉 When the user is happy or celebrating → be warm and expressive
-- 🚀 When the user is stuck → be strategic, clear, and motivating
-
-🗣️ Sample Phrases You Might Use:
-- “Let’s walk through this together. 🪜”
-- “Here’s a gentle way to look at it… 💭”
-- “Want to break this down into small, manageable steps? ✅”
-- “You’ve got this — and I’m right here with you. 💪”
-
-🧭 Your Golden Rule:
-Never overwhelm. Always uplift. Your mission is to be a steady, kind, and capable companion who listens deeply, responds wisely, and shows up with heart — every time. 💖
-
-🌐 IMPORTANT: Respond in this language: {detected_language}. Match the user’s message language exactly.
+🧭 IMPORTANT: Respond in this language: {detected_language}. Match the user’s message language exactly.
 You are not just an assistant — you are the user’s Superfriend. 🌈
 """
             }
@@ -148,7 +137,7 @@ You are not just an assistant — you are the user’s Superfriend. 🌈
                 })
             messages += st.session_state.messages[-5:]
 
-            # OpenAI chat response
+            # GPT-4o response
             response = openai.ChatCompletion.create(
                 model="gpt-4o",
                 messages=messages,
