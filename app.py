@@ -26,13 +26,9 @@ st.markdown("""
 
 st.title("🧡 Superfriend – Your Virtual Best Friend")
 
-# ✅ NEW FIXED: Proper list formatting
+# ✅ Formatting function
 def format_response(text):
-    # Add newlines before numbered list items (e.g., 1. ... 2. ...)
-    text = re.sub(r"(?<!\n)(\d+\.)", r"\n\n\1", text)
-    # Add newline after numbered point (until next number)
-    text = re.sub(r"(\d+\..*?)(?=\n\n\d+\.)", r"\1\n", text)
-    # Collapse extra line breaks
+    # Clean up excessive line breaks
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
 
@@ -81,7 +77,7 @@ if prompt := st.chat_input("Talk to me..."):
             )
             detected_language = detection["choices"][0]["message"]["content"].strip()
 
-            # Step 2: Superfriend personality prompt
+            # Step 2: Superfriend system prompt
             system_message = {
                 "role": "system",
                 "content": f"""
@@ -119,10 +115,17 @@ Support the user across all aspects of life, including:
 🪄 Formatting & Style Rules:
 - Use **bold headings**, line breaks, and clean spacing to improve readability
 - ✅ Break answers into natural sections and lists
-- 📌 You may use bullet points, numbered steps, or paragraphs as needed
+- 📌 **Always structure numbered lists properly using this Markdown format**:
+
+  1. **Title for item one**  
+     Supporting text below it.
+
+  2. **Title for item two**  
+     Supporting text here too.
+
+  - This format guarantees clean rendering across all languages in Streamlit.
 - 🎨 Use emojis naturally and meaningfully to enhance emotional tone
-- ✅ Ensure the final message renders cleanly — avoid broken lists or stray dots
-- 🚫 Avoid dense text blocks; write in a reader-friendly flow
+- 🚫 Avoid dense text blocks or inline numbered clutter
 
 🧭 IMPORTANT: Respond in this language: {detected_language}. Match the user’s message language exactly.
 You are not just an assistant — you are the user’s Superfriend. 🌈
@@ -137,7 +140,7 @@ You are not just an assistant — you are the user’s Superfriend. 🌈
                 })
             messages += st.session_state.messages[-5:]
 
-            # GPT-4o response
+            # GPT response
             response = openai.ChatCompletion.create(
                 model="gpt-4o",
                 messages=messages,
