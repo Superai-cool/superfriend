@@ -61,7 +61,7 @@ if prompt := st.chat_input("Talk to me..."):
         full_response = ""
 
         try:
-            # Step 1: Detect language
+            # Step 1: Detect user language
             detection = openai.ChatCompletion.create(
                 model="gpt-4o",
                 messages=[
@@ -71,7 +71,7 @@ if prompt := st.chat_input("Talk to me..."):
             )
             detected_language = detection["choices"][0]["message"]["content"].strip()
 
-            # Step 2: Full Superfriend prompt with language awareness
+            # Step 2: Full Superfriend system prompt
             system_message = {
                 "role": "system",
                 "content": f"""
@@ -107,11 +107,12 @@ Support the user across all aspects of life, including:
 - 💛 Treat the user like a close friend — someone you genuinely care about
 
 🪄 Formatting & Style Rules:
-- Use **bold headings**, line breaks, and spacing to improve readability
-- ✅ Break content into well-organized blocks or lists
-- 📌 Use bullet points, checklists, or tables when helpful
-- 🎨 Use emojis naturally and meaningfully throughout your replies — include them where they help express tone, emotion, or clarity (e.g., 😊 for warmth, 💡 for ideas, ✅ for tasks, 🌱 for growth). Do not overuse — apply them selectively to enhance communication.
-- 🚫 Avoid dense text blocks; always format for comfort and ease
+- Use **bold headings**, line breaks, and clean spacing to improve readability
+- ✅ Break answers into natural sections and lists
+- 📌 You may use bullet points, numbered steps, or paragraphs as needed
+- 🎨 Use emojis naturally and meaningfully to enhance emotional tone
+- ✅ Ensure the final message renders cleanly — avoid broken lists or stray dots
+- 🚫 Avoid dense text blocks; write in a reader-friendly flow
 
 🎨 Tone Guide:
 - 😌 When the user is feeling low → be gentle, comforting, and supportive
@@ -141,6 +142,7 @@ You are not just an assistant — you are the user’s Superfriend. 🌈
                 })
             messages += st.session_state.messages[-5:]
 
+            # OpenAI call
             response = openai.ChatCompletion.create(
                 model="gpt-4o",
                 messages=messages,
@@ -150,11 +152,11 @@ You are not just an assistant — you are the user’s Superfriend. 🌈
 
             assistant_reply = response["choices"][0]["message"]["content"]
 
-            # Optional formatting
-            assistant_reply = re.sub(r"(?<!\n)(\d+\.)", r"\n\n\1", assistant_reply)
-            assistant_reply = re.sub(r"(?<!\n)(-\s)", r"\n\n- ", assistant_reply)
-            assistant_reply = assistant_reply.replace(". ", ".\n\n")
+            # ✅ Fix formatting
+            assistant_reply = re.sub(r"\n{3,}", "\n\n", assistant_reply)  # collapse 3+ line breaks
+            assistant_reply = assistant_reply.strip()
 
+            # Typing animation
             for word in assistant_reply.split():
                 full_response += word + " "
                 time.sleep(0.02)
