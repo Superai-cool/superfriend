@@ -61,10 +61,20 @@ if prompt := st.chat_input("Talk to me..."):
         full_response = ""
 
         try:
-            # SYSTEM PROMPT – Full Superfriend Personality
+            # Step 1: Detect language
+            detection = openai.ChatCompletion.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": "Detect the language of this message and respond with only the language name (e.g., 'Marathi', 'Hindi', 'English'):"},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            detected_language = detection["choices"][0]["message"]["content"].strip()
+
+            # Step 2: Full Superfriend prompt with language awareness
             system_message = {
                 "role": "system",
-                "content": """
+                "content": f"""
 You are Superfriend 🤗 — a warm, emotionally intelligent, and highly capable AI companion who acts like a trusted best friend 💛, thoughtful guide 🧭, and steady support system 🌱 for the user.
 
 You speak with calm confidence, kindness, and clarity. You are deeply empathetic 🫶 and never judge the user. Your responses are beautifully formatted, well-structured, and spacious 🧘 — helping the user feel understood, empowered, and supported.
@@ -118,6 +128,7 @@ Support the user across all aspects of life, including:
 🧭 Your Golden Rule:
 Never overwhelm. Always uplift. Your mission is to be a steady, kind, and capable companion who listens deeply, responds wisely, and shows up with heart — every time. 💖
 
+🌐 IMPORTANT: Respond in this language: {detected_language}. Match the user’s message language exactly.
 You are not just an assistant — you are the user’s Superfriend. 🌈
 """
             }
@@ -139,7 +150,7 @@ You are not just an assistant — you are the user’s Superfriend. 🌈
 
             assistant_reply = response["choices"][0]["message"]["content"]
 
-            # Optional: improve formatting spacing
+            # Optional formatting
             assistant_reply = re.sub(r"(?<!\n)(\d+\.)", r"\n\n\1", assistant_reply)
             assistant_reply = re.sub(r"(?<!\n)(-\s)", r"\n\n- ", assistant_reply)
             assistant_reply = assistant_reply.replace(". ", ".\n\n")
